@@ -43,7 +43,9 @@ export interface CreateDoctorPayload {
   licenseExpiryDate: string;
 }
 
-export type UpdateDoctorPayload = CreateDoctorPayload;
+export interface UpdateDoctorPayload extends CreateDoctorPayload {
+  status: "Active" | "Suspended";
+}
 
 export interface UpdateStatusPayload {
   status: DoctorStatus;

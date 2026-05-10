@@ -101,7 +101,7 @@ export default function DoctorTable({
                       title="Change status"
                     >
                       {STATUS_OPTIONS.map((s) => (
-                        <option key={s} value={s}>{s}</option>
+                        <option key={s} value={s} disabled={s === "Expired"} style={s === "Expired" ? { cursor: "not-allowed" } : undefined}>{s}</option>
                       ))}
                     </select>
 

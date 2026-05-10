@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { doctorApi } from "@/lib/api";
-import type { CreateDoctorPayload, Doctor, DoctorStatus, PagedResult } from "@/types/doctor";
+import { doctorApi, UnauthorizedError } from "@/lib/api";
+import { getAuthUser } from "@/lib/auth";
+import type { CreateDoctorPayload, Doctor, DoctorStatus, PagedResult, UpdateDoctorPayload } from "@/types/doctor";
 import DoctorTable from "@/components/DoctorTable";
 import SearchFilter from "@/components/SearchFilter";
 import Pagination from "@/components/Pagination";
@@ -24,11 +25,19 @@ export default function DoctorsPage() {
   const [status, setStatus] = useState<DoctorStatus | "">("");
   const [page, setPage] = useState(1);
 
+  // ─── Auth state ────────────────────────────────────────────────────────────
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    setIsAuthenticated(!!getAuthUser());
+  }, []);
+
   // ─── Modal state ───────────────────────────────────────────────────────────
   const [formOpen, setFormOpen] = useState(false);
   const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null);
   const [viewingDoctor, setViewingDoctor] = useState<Doctor | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showUnauthorized, setShowUnauthorized] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   // ─── Fetch doctors ─────────────────────────────────────────────────────────
@@ -90,20 +99,29 @@ export default function DoctorsPage() {
     setEditingDoctor(null);
   }
 
-  async function handleFormSubmit(payload: CreateDoctorPayload) {
+  function handleUnauthorized(err: unknown) {
+    if (err instanceof UnauthorizedError) {
+      setShowUnauthorized(true);
+    } else {
+      showToast(err instanceof Error ? err.message : "Operation failed.", "error");
+    }
+  }
+
+  async function handleFormSubmit(payload: CreateDoctorPayload | UpdateDoctorPayload) {
     setIsSubmitting(true);
     try {
       if (editingDoctor) {
-        await doctorApi.update(editingDoctor.id, payload);
+        await doctorApi.update(editingDoctor.id, payload as UpdateDoctorPayload);
         showToast("Doctor updated successfully.", "success");
       } else {
-        await doctorApi.create(payload);
+        await doctorApi.create(payload as CreateDoctorPayload);
         showToast("Doctor added successfully.", "success");
       }
       closeFormModal();
       fetchDoctors();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Operation failed.", "error");
+      closeFormModal();
+      handleUnauthorized(err);
     } finally {
       setIsSubmitting(false);
     }
@@ -116,7 +134,7 @@ export default function DoctorsPage() {
       showToast("Doctor deleted.", "success");
       fetchDoctors();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Delete failed.", "error");
+      handleUnauthorized(err);
     }
   }
 
@@ -127,13 +145,29 @@ export default function DoctorsPage() {
       showToast(`Status changed to ${newStatus}.`, "success");
       fetchDoctors();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Status update failed.", "error");
+      handleUnauthorized(err);
     }
   }
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
+      {/* Guest banner */}
+      {!isAuthenticated && (
+        <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <svg className="h-5 w-5 shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          <span>
+            You are viewing in read-only mode.{" "}
+            <a href="/login" className="font-semibold underline underline-offset-2 hover:text-amber-900">
+              Log in as admin to update.
+            </a>
+          </span>
+        </div>
+      )}
+
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
@@ -225,6 +259,40 @@ export default function DoctorsPage() {
         doctor={viewingDoctor}
         onClose={() => setViewingDoctor(null)}
       />
+
+      {/* Unauthorized popup */}
+      {showUnauthorized && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl ring-1 ring-gray-200">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100">
+                <svg className="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">Unauthorized</h3>
+                <p className="text-sm text-gray-500">Log in as admin to update.</p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowUnauthorized(false)}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+              >
+                Dismiss
+              </button>
+              <a
+                href="/login"
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+              >
+                Log in
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast notification */}
       {toast && (
