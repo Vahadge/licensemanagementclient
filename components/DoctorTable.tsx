@@ -5,6 +5,7 @@ import StatusBadge from "@/components/StatusBadge";
 
 interface DoctorTableProps {
   doctors: Doctor[];
+  isAuthenticated: boolean;
   onEdit: (doctor: Doctor) => void;
   onDelete: (doctor: Doctor) => void;
   onStatusChange: (doctor: Doctor, status: DoctorStatus) => void;
@@ -23,6 +24,7 @@ const STATUS_OPTIONS: DoctorStatus[] = ["Active", "Expired", "Suspended"];
 
 export default function DoctorTable({
   doctors,
+  isAuthenticated,
   onEdit,
   onDelete,
   onStatusChange,
@@ -87,8 +89,14 @@ export default function DoctorTable({
                 <td className="whitespace-nowrap px-4 py-3">
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => onEdit(doctor)}
-                      className="rounded px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                      onClick={() => isAuthenticated && onEdit(doctor)}
+                      disabled={!isAuthenticated}
+                      title={!isAuthenticated ? "Log in as admin to edit" : undefined}
+                      className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                        isAuthenticated
+                          ? "text-blue-700 hover:bg-blue-50 cursor-pointer"
+                          : "text-gray-300 cursor-not-allowed"
+                      }`}
                     >
                       Edit
                     </button>
@@ -96,9 +104,14 @@ export default function DoctorTable({
                     {/* Quick status change dropdown */}
                     <select
                       value={doctor.status}
+                      disabled={!isAuthenticated}
                       onChange={(e) => onStatusChange(doctor, e.target.value as DoctorStatus)}
-                      className="rounded border border-gray-300 px-1 py-1 text-xs text-gray-700 focus:border-blue-500 focus:outline-none"
-                      title="Change status"
+                      title={!isAuthenticated ? "Log in as admin to change status" : "Change status"}
+                      className={`rounded border px-1 py-1 text-xs focus:outline-none ${
+                        isAuthenticated
+                          ? "border-gray-300 text-gray-700 focus:border-blue-500 cursor-pointer"
+                          : "border-gray-200 text-gray-300 cursor-not-allowed bg-transparent"
+                      }`}
                     >
                       {STATUS_OPTIONS.map((s) => (
                         <option key={s} value={s} disabled={s === "Expired"} style={s === "Expired" ? { cursor: "not-allowed" } : undefined}>{s}</option>
@@ -106,8 +119,14 @@ export default function DoctorTable({
                     </select>
 
                     <button
-                      onClick={() => onDelete(doctor)}
-                      className="rounded px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
+                      onClick={() => isAuthenticated && onDelete(doctor)}
+                      disabled={!isAuthenticated}
+                      title={!isAuthenticated ? "Log in as admin to delete" : undefined}
+                      className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                        isAuthenticated
+                          ? "text-red-700 hover:bg-red-50 cursor-pointer"
+                          : "text-gray-300 cursor-not-allowed"
+                      }`}
                     >
                       Delete
                     </button>

@@ -180,7 +180,13 @@ export default function DoctorsPage() {
         </div>
         <button
           onClick={openAddModal}
-          className="flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          disabled={!isAuthenticated}
+          title={!isAuthenticated ? "Log in as admin to add a doctor" : undefined}
+          className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium shadow-sm transition-colors ${
+            isAuthenticated
+              ? "bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer"
+              : "bg-gray-200 text-gray-400 cursor-not-allowed"
+          }`}
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -222,6 +228,7 @@ export default function DoctorsPage() {
           <>
             <DoctorTable
               doctors={result?.data ?? []}
+              isAuthenticated={isAuthenticated}
               onEdit={openEditModal}
               onDelete={handleDelete}
               onStatusChange={handleStatusChange2}
